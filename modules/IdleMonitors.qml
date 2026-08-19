@@ -16,8 +16,35 @@ Scope {
     readonly property bool hasPlayer: Players.list.some(p => p.isPlaying) || (Audio.streams && Audio.streams.some(s => s.ready && !s.audio?.muted))
     readonly property bool isCharging: !UPower.onBattery
     readonly property bool isGaming: GameMode.enabled || (function() {
-        const cls = Hypr.activeToplevel?.lastIpcObject?.class?.toLowerCase() || "";
-        return cls.includes("bottles") || cls.includes("wine") || cls.includes("steam") || cls.includes("lutris") || cls.includes("heroic");
+        const top = Hypr.activeToplevel;
+        const cls = (top?.lastIpcObject?.class || "").toLowerCase();
+        const title = (top?.title || "").toLowerCase();
+
+        // Direct check on active window class or title
+        if (cls.includes("bottles") || cls.includes("wine") || cls.includes("steam") ||
+            cls.includes("lutris") || cls.includes("heroic") || cls.includes("f1") ||
+            cls.includes(".exe") || cls.includes("proton") || cls.includes("gamescope") ||
+            title.includes(".exe") || title.includes("f1") || title.includes("formula 1") ||
+            title.includes("bottles") || title.includes("wine") || title.includes("steam") ||
+            title.includes("lutris") || title.includes("heroic")) {
+            return true;
+        }
+
+        // Check all open windows across workspaces for active Wine/Bottles/games
+        if (Hypr.toplevels && Hypr.toplevels.values) {
+            for (let i = 0; i < Hypr.toplevels.values.length; i++) {
+                const win = Hypr.toplevels.values[i];
+                const wCls = (win?.lastIpcObject?.class || "").toLowerCase();
+                const wTitle = (win?.title || "").toLowerCase();
+                if (wCls.includes("bottles") || wCls.includes("wine") || wCls.includes("gamescope") ||
+                    wCls.includes(".exe") || wTitle.includes(".exe") || wTitle.includes("f1 22") ||
+                    wTitle.includes("f1 2022") || wTitle.includes("formula 1")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     })()
 
     readonly property bool enabled: {
@@ -27,6 +54,8 @@ Scope {
             return false;
         if (GlobalConfig.general.idle.inhibitWhenGaming && isGaming)
             return false;
+        if (isGaming)
+            return false; // Always inhibit idle when gaming is detected
         return true;
     }
 
