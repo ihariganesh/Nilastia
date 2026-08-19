@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell.Services.UPower
 import Nilastia.Config
+import Nilastia.Services
 import qs.components
 import qs.services
 
@@ -13,7 +14,7 @@ Column {
     width: Tokens.sizes.bar.batteryWidth
 
     StyledText {
-        text: UPower.displayDevice.isLaptopBattery ? qsTr("Remaining: %1%").arg(Math.round(UPower.displayDevice.percentage * 100)) : qsTr("No battery detected")
+        text: BatteryService.isLaptopBattery ? qsTr("Remaining: %1%").arg(BatteryService.percentage) : qsTr("No battery detected")
     }
 
     StyledText {
@@ -33,7 +34,7 @@ Column {
             return comps.join(", ") || fallback;
         }
 
-        text: UPower.displayDevice.isLaptopBattery ? qsTr("Time %1: %2").arg(UPower.onBattery ? "remaining" : "until charged").arg(UPower.onBattery ? formatSeconds(UPower.displayDevice.timeToEmpty, "Calculating...") : formatSeconds(UPower.displayDevice.timeToFull, "Fully charged!")) : qsTr("Power profile: %1").arg(PowerProfile.toString(PowerProfiles.profile))
+        text: BatteryService.isLaptopBattery ? qsTr("Time %1: %2").arg(!BatteryService.isCharging ? "remaining" : "until charged").arg(!BatteryService.isCharging ? formatSeconds(UPower.displayDevice.timeToEmpty, "Calculating...") : formatSeconds(UPower.displayDevice.timeToFull, "Fully charged!")) : qsTr("Power profile: %1").arg(PowerProfile.toString(PowerProfiles.profile))
     }
 
     Loader {
