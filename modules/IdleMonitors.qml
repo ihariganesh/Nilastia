@@ -63,6 +63,12 @@ Scope {
         if (!action)
             return;
 
+        // Strict Guard: Block all idle actions (lock, dpms off, suspend) when gaming or media playing
+        if (!root.enabled || root.isGaming || (GlobalConfig.general.idle.inhibitWhenGaming && root.isGaming) || (GlobalConfig.general.idle.inhibitWhenAudio && root.hasPlayer)) {
+            console.log("[IdleMonitors] Blocked idle action because gaming/audio is active:", JSON.stringify(action));
+            return;
+        }
+
         if (action === "lock") {
             lock.lock.locked = true;
         } else if (action === "unlock") {
@@ -88,12 +94,13 @@ Scope {
 
     Connections {
         function onAboutToSleep(): void {
-            if (GlobalConfig.general.idle.lockBeforeSleep)
+            if (GlobalConfig.general.idle.lockBeforeSleep && !root.isGaming)
                 root.lock.lock.locked = true;
         }
 
         function onLockRequested(): void {
-            root.lock.lock.locked = true;
+            if (!root.isGaming)
+                root.lock.lock.locked = true;
         }
 
         function onUnlockRequested(): void {
@@ -118,11 +125,21 @@ Scope {
                     return false;
                 if (modelData.inhibitWhenGaming && root.isGaming)
                     return false;
+                if (root.isGaming)
+                    return false;
                 return true;
             }
             timeout: modelData.timeout
             respectInhibitors: modelData.respectInhibitors ?? true
-            onIsIdleChanged: root.handleIdleAction(isIdle ? modelData.idleAction : modelData.returnAction)
+            onIsIdleChanged: {
+                if (isIdle) {
+                    if (!root.enabled || root.isGaming || (GlobalConfig.general.idle.inhibitWhenGaming && root.isGaming) || (GlobalConfig.general.idle.inhibitWhenAudio && root.hasPlayer))
+                        return;
+                    root.handleIdleAction(modelData.idleAction);
+                } else {
+                    root.handleIdleAction(modelData.returnAction);
+                }
+            }
         }
     }
 }
