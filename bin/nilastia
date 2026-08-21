@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
 import sys
+import os
 import subprocess
 
-REAL_CLI = "/home/saravana/projects/calestia/nilastia/cli/bin/nilastia"
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+candidates = [
+    os.path.join(SCRIPT_DIR, "..", "cli", "bin", "nilastia"),
+    os.path.expanduser("~/Nilastia/cli/bin/nilastia"),
+    "/usr/share/nilastia/cli/bin/nilastia"
+]
+
+REAL_CLI = None
+for c in candidates:
+    real_c = os.path.realpath(c)
+    if os.path.exists(real_c):
+        REAL_CLI = real_c
+        break
 
 def main():
     args = sys.argv[1:]

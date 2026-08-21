@@ -22,11 +22,17 @@ Searcher {
     property bool previewColourLock
     property bool pendingPreviewClear
 
+    function isParallaxPath(p: string): bool {
+        if (!p) return false;
+        let lower = p.toLowerCase();
+        return lower.endsWith("wallpaper.json") || lower.endsWith(".nilawall") || lower.endsWith(".json");
+    }
+
     property string parallaxPreviewPath: ""
     readonly property string currentPreviewPath: {
         let path = root.current;
         if (!path) return "";
-        if (path.toLowerCase().endsWith("wallpaper.json")) {
+        if (root.isParallaxPath(path)) {
             return root.parallaxPreviewPath;
         }
         return path;
@@ -98,25 +104,21 @@ Searcher {
         path: root.currentNamePath
         watchChanges: true
         printErrors: false
-        onFileChanged: reload()
+
         onLoaded: {
-            let wall = text().trim();
-            if (!wall) {
-                wall = root.fallback;
-                if (!root.isInitializingFallback) {
-                    root.isInitializingFallback = true;
-                    Quickshell.execDetached(["nilastia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
-                }
+            let p = text().trim();
+            if (p) {
+                root.actualCurrent = p;
+                root.isInitializingFallback = false;
+            } else if (!root.isInitializingFallback) {
+                root.isInitializingFallback = true;
+                root.actualCurrent = root.fallback;
             }
-            root.actualCurrent = wall;
-            root.previewColourLock = false;
         }
         onLoadFailed: {
-            root.actualCurrent = root.fallback;
-            root.previewColourLock = false;
             if (!root.isInitializingFallback) {
                 root.isInitializingFallback = true;
-                Quickshell.execDetached(["nilastia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
+                root.actualCurrent = root.fallback;
             }
         }
     }
@@ -143,16 +145,31 @@ Searcher {
 
     FileView {
         id: activeWallpaperReader
-        path: root.current && root.current.toLowerCase().endsWith("wallpaper.json") ? root.current : ""
+        path: root.isParallaxPath(root.current) ? root.current : ""
         printErrors: false
-        
+        watchChanges: true
+        onFileChanged: reload()
+
         onLoaded: {
             try {
                 let json = JSON.parse(text());
-                if (json.parallax && json.parallax.layers && json.parallax.layers.length > 0) {
-                    let idx = root.current.lastIndexOf("/");
-                    let basePath = idx >= 0 ? root.current.slice(0, idx + 1) : "";
-                    root.parallaxPreviewPath = basePath + json.parallax.layers[0].source;
+                let layers = json.parallax?.layers || [];
+                let firstImgSrc = "";
+                for (let i = 0; i < layers.length; i++) {
+                    let src = layers[i].source || "";
+                    if (src && !src.startsWith("virtual://")) {
+                        firstImgSrc = src;
+                        break;
+                    }
+                }
+                if (firstImgSrc) {
+                    if (firstImgSrc.startsWith("data:")) {
+                        root.parallaxPreviewPath = firstImgSrc;
+                    } else {
+                        let idx = root.current.lastIndexOf("/");
+                        let basePath = idx >= 0 ? root.current.slice(0, idx + 1) : "";
+                        root.parallaxPreviewPath = basePath + firstImgSrc;
+                    }
                 } else {
                     root.parallaxPreviewPath = "";
                 }

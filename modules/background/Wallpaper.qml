@@ -27,7 +27,9 @@ Item {
     }
 
     function checkIsParallax(path) {
-        return false;
+        if (!path) return false;
+        let lower = path.toLowerCase();
+        return lower.endsWith(".json") || lower.endsWith(".nilawall") || lower.endsWith("wallpaper.json");
     }
 
     function checkIsGif(path) {
